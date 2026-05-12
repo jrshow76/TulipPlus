@@ -1,0 +1,100 @@
+name: tulip-plus
+
+services:
+  # =========================================================
+  # PostgreSQL
+  # =========================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: tulip-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tulipdb}
+      POSTGRES_USER: ${POSTGRES_USER:-tulip}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tulip1234}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tulip} -d ${POSTGRES_DB:-tulipdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - tulip-net
+
+  # =========================================================
+  # Auth Service
+  # =========================================================
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: tulip-auth-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-tulipdb}?currentSchema=tulip
+      DB_USERNAME: ${POSTGRES_USER:-tulip}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-tulip1234}
+      JWT_SECRET: ${JWT_SECRET:-tulipPlusSuperSecretKeyForJwtTokenGenerationMustBeLongerThan256Bits!!}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "8081:8081"
+    networks:
+      - tulip-net
+
+  # =========================================================
+  # User Service
+  # =========================================================
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: tulip-user-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-tulipdb}?currentSchema=tulip
+      DB_USERNAME: ${POSTGRES_USER:-tulip}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-tulip1234}
+      JWT_SECRET: ${JWT_SECRET:-tulipPlusSuperSecretKeyForJwtTokenGenerationMustBeLongerThan256Bits!!}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "8082:8082"
+    networks:
+      - tulip-net
+
+  # =========================================================
+  # Frontend (Next.js)
+  # =========================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tulip-frontend
+    restart: unless-stopped
+    depends_on:
+      - auth-service
+      - user-service
+    environment:
+      NEXT_PUBLIC_AUTH_API_URL: ${NEXT_PUBLIC_AUTH_API_URL:-http://localhost:8081}
+      NEXT_PUBLIC_USER_API_URL: ${NEXT_PUBLIC_USER_API_URL:-http://localhost:8082}
+    ports:
+      - "3000:3000"
+    networks:
+      - tulip-net
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  tulip-net:
+    driver: bridge

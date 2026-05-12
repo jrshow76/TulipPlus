@@ -1,0 +1,29 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: user-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tulipdb?currentSchema=tulip}
+    username: ${DB_USERNAME:tulip}
+    password: ${DB_PASSWORD:tulip1234}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+
+mybatis:
+  mapper-locations: classpath:mappers/*.xml
+  type-aliases-package: com.tulipplus.user.domain
+  configuration:
+    map-underscore-to-camel-case: true
+
+jwt:
+  secret: ${JWT_SECRET:tulipPlusSuperSecretKeyForJwtTokenGenerationMustBeLongerThan256Bits!!}
+
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:3000}
+
+logging:
+  level:
+    com.tulipplus: DEBUG

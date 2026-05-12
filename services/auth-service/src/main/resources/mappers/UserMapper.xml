@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tulipplus.auth.mapper.UserMapper">
+
+    <resultMap id="UserResult" type="com.tulipplus.auth.domain.User">
+        <id     property="id"        column="id"/>
+        <result property="email"     column="email"/>
+        <result property="password"  column="password"/>
+        <result property="username"  column="username"/>
+        <result property="role"      column="role"/>
+        <result property="status"    column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByEmail" resultMap="UserResult">
+        SELECT id, email, password, username, role, status, created_at, updated_at
+          FROM tulip.users
+         WHERE email = #{email}
+    </select>
+
+    <select id="findByUsername" resultMap="UserResult">
+        SELECT id, email, password, username, role, status, created_at, updated_at
+          FROM tulip.users
+         WHERE username = #{username}
+    </select>
+
+    <select id="findById" resultMap="UserResult">
+        SELECT id, email, password, username, role, status, created_at, updated_at
+          FROM tulip.users
+         WHERE id = #{id}
+    </select>
+
+    <insert id="insertUser" parameterType="com.tulipplus.auth.domain.User"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tulip.users (email, password, username, role, status)
+        VALUES (#{email}, #{password}, #{username},
+                COALESCE(#{role}, 'USER'),
+                COALESCE(#{status}, 'ACTIVE'))
+    </insert>
+
+    <select id="existsByEmail" resultType="int">
+        SELECT COUNT(1) FROM tulip.users WHERE email = #{email}
+    </select>
+
+    <select id="existsByUsername" resultType="int">
+        SELECT COUNT(1) FROM tulip.users WHERE username = #{username}
+    </select>
+
+    <insert id="insertProfile">
+        INSERT INTO tulip.user_profiles (user_id, full_name, phone)
+        VALUES (#{userId}, #{fullName}, #{phone})
+    </insert>
+
+    <update id="updateLastLogin">
+        UPDATE tulip.users SET updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
+
+</mapper>
